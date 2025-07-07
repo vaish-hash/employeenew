@@ -8,7 +8,7 @@ import io
 import pandas as pd
 import re
 import sys
-# from db_seeder import seed_all_data # Ensure db_seeder.py exists in the same directory
+from db_seeder import seed_all_data # Ensure db_seeder.py exists in the same directory
 
 
 # Get the absolute path of the directory containing this app.py file
@@ -206,13 +206,13 @@ def init_db_command():
         db.create_all()
     print("Database tables initialized!")
 
-# @app.cli.command("seed-data")
-# def seed_data_command():
-#     """Seed the database with initial data."""
-#     print("Starting database seeding process...")
-#     with app.app_context():
-#         seed_all_data()
-#     print("Database seeding complete!")
+@app.cli.command("seed-data")
+def seed_data_command():
+    """Seed the database with initial data."""
+    print("Starting database seeding process...")
+    with app.app_context():
+        seed_all_data()
+    print("Database seeding complete!")
 
 
 # --- Routes ---
