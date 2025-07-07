@@ -99,3 +99,30 @@ Preferred communication style: Simple, everyday language.
 
 Changelog:
 - July 07, 2025. Initial setup
+- July 07, 2025. Deployed original Flask employee management app from GitHub
+- July 07, 2025. Fixed login timeout issues by disabling hard stop mechanism
+- July 07, 2025. Enhanced Excel import with better error logging and column validation
+
+## Excel Import Requirements
+
+For successful data import, ensure your Excel file has these exact column names:
+
+**For Employee Data (data_type: 'employees'):**
+- Name
+- Email  
+- Position
+
+**For Project Data (data_type: 'projects'):**
+- Project Name
+- Duration (Months)
+- Start Month
+- Start Year
+- End Month
+- End Year
+
+**For Weekly Hours Data (data_type: 'actual_hours_bulk'):**
+- Emp Name
+- Project Name
+- Function
+- Week Days (date format: "Jun 16, 2025" or "YYYY-MM-DD")
+- Hours (numeric value)

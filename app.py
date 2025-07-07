@@ -310,6 +310,11 @@ def api_import_data():
             imported_count = 0
             skipped_count = 0
             errors = []
+            
+            # Debug: Log the actual column names found
+            current_app.logger.info(f"Excel columns found: {list(df.columns)}")
+            current_app.logger.info(f"Data type selected: {data_type}")
+            current_app.logger.info(f"DataFrame shape: {df.shape}")
 
             if data_type == 'employees':
                 # Expected columns: 'Name', 'Email', 'Position'
@@ -581,7 +586,12 @@ def api_import_data():
         except Exception as e:
             error_message = f"Error processing Excel file: {str(e)}"
             app.logger.error(f"Excel processing failed: {e}")
-            return jsonify({"message": error_message}), 500
+            app.logger.error(f"Excel columns were: {list(df.columns) if 'df' in locals() else 'DataFrame not created'}")
+            return jsonify({
+                "message": error_message,
+                "columns_found": list(df.columns) if 'df' in locals() else [],
+                "errors": errors if 'errors' in locals() else []
+            }), 500
     else:
         return jsonify({"message": "Invalid file type. Please upload an Excel file (.xlsx or .xls)."}), 400
 
