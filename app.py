@@ -1153,7 +1153,13 @@ def api_export_data():
             return jsonify({"message": "Invalid export type"}), 400
             
         if not data:
-            return jsonify({"message": f"No {export_type} data available to export"}), 404
+            # Create empty Excel file with headers
+            if export_type == 'employees':
+                data = [{'Name': '', 'Email': '', 'Role': ''}]
+            elif export_type == 'projects':
+                data = [{'Project Name': '', 'Duration (Months)': '', 'Start Month': '', 'Start Year': '', 'End Month': '', 'End Year': ''}]
+            elif export_type == 'weekly_hours':
+                data = [{'Emp Name': '', 'Project Name': '', 'Function': '', 'Week Days': '', 'Hours': ''}]
             
         # Create Excel file
         output = io.BytesIO()
