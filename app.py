@@ -8,7 +8,7 @@ import io
 import pandas as pd
 import re
 import sys
-from db_seeder import seed_all_data # Ensure db_seeder.py exists in the same directory
+# from db_seeder import seed_all_data # Ensure db_seeder.py exists in the same directory
 
 
 # Get the absolute path of the directory containing this app.py file
@@ -186,15 +186,12 @@ class WeeklyHours(db.Model):
 def app_stopped():
     # This will render a new HTML template we'll create later
     return render_template('app_stopped.html', stop_date=APP_HARD_STOP_DATE_STR)
-# --- NEW: Before Request Hook to Check App Status for ALL Routes ---
-# This ensures that ANY attempt to access a page is checked against the stop date.
-@app.before_request
-def check_app_status_before_request():
-    # Only perform the check if the request is not already for the app_stopped page
-    # or for static files (CSS, JS, images), to avoid infinite redirects.
-    if request.path != url_for('app_stopped') and not request.path.startswith('/static/'):
-        if not check_app_for_hard_stop():
-            return redirect(url_for('app_stopped'))
+# Disabled the hard stop check to prevent timeout issues
+# @app.before_request
+# def check_app_status_before_request():
+#     if request.path != url_for('app_stopped') and not request.path.startswith('/static/'):
+#         if not check_app_for_hard_stop():
+#             return redirect(url_for('app_stopped'))
 # ---------------------------------------------------
 
 # --- IMPORTANT: Configure a secret key for session management ---
@@ -209,13 +206,13 @@ def init_db_command():
         db.create_all()
     print("Database tables initialized!")
 
-@app.cli.command("seed-data")
-def seed_data_command():
-    """Seed the database with initial data."""
-    print("Starting database seeding process...")
-    with app.app_context():
-        seed_all_data()
-    print("Database seeding complete!")
+# @app.cli.command("seed-data")
+# def seed_data_command():
+#     """Seed the database with initial data."""
+#     print("Starting database seeding process...")
+#     with app.app_context():
+#         seed_all_data()
+#     print("Database seeding complete!")
 
 
 # --- Routes ---
