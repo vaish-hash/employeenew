@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, date, timedelta
@@ -1117,12 +1117,17 @@ def api_export_data():
 
     try:
         export_type = request.args.get('type', 'weekly_hours')
+        app.logger.info(f"Exporting {export_type} data")
+        
+        data = []
+        filename = f'{export_type}_export.xlsx'
         
         if export_type == 'employees':
             # Export employees data
             employees = Employee.query.all()
             data = [{'Name': emp.name, 'Email': emp.email, 'Role': emp.role} for emp in employees]
-            filename = 'employees_export.xlsx'
+            if not data:
+                data = [{'Name': 'No employees found', 'Email': '', 'Role': ''}]
             
         elif export_type == 'projects':
             # Export projects data
@@ -1135,50 +1140,61 @@ def api_export_data():
                 'End Month': proj.end_month,
                 'End Year': proj.end_year
             } for proj in projects]
-            filename = 'projects_export.xlsx'
+            if not data:
+                data = [{'Project Name': 'No projects found', 'Duration (Months)': '', 'Start Month': '', 'Start Year': '', 'End Month': '', 'End Year': ''}]
             
         elif export_type == 'weekly_hours':
-            # Export weekly hours data
-            weekly_hours = db.session.query(WeeklyHours).join(Assignment).join(Employee).join(Project).all()
-            data = [{
-                'Emp Name': wh.assignment.employee.name,
-                'Project Name': wh.assignment.project.name,
-                'Function': wh.function_name,
-                'Week Days': wh.week_start_date.strftime('%Y-%m-%d'),
-                'Hours': wh.hours_worked
-            } for wh in weekly_hours]
-            filename = 'weekly_hours_export.xlsx'
+            # Export weekly hours data - simplified query
+            weekly_hours = WeeklyHours.query.all()
+            for wh in weekly_hours:
+                try:
+                    assignment = Assignment.query.get(wh.assignment_id)
+                    if assignment:
+                        employee = Employee.query.get(assignment.employee_id)
+                        project = Project.query.get(assignment.project_id)
+                        if employee and project:
+                            data.append({
+                                'Emp Name': employee.name,
+                                'Project Name': project.name,
+                                'Function': wh.function_name or 'General',
+                                'Week Days': wh.week_start_date.strftime('%Y-%m-%d') if wh.week_start_date else 'N/A',
+                                'Hours': wh.hours_worked
+                            })
+                except Exception as e:
+                    app.logger.warning(f"Error processing weekly hours record {wh.id}: {e}")
+                    
+            if not data:
+                data = [{'Emp Name': 'No weekly hours found', 'Project Name': '', 'Function': '', 'Week Days': '', 'Hours': ''}]
             
         else:
-            return jsonify({"message": "Invalid export type"}), 400
+            return jsonify({"error": "Invalid export type"}), 400
             
-        if not data:
-            # Create empty Excel file with headers
-            if export_type == 'employees':
-                data = [{'Name': '', 'Email': '', 'Role': ''}]
-            elif export_type == 'projects':
-                data = [{'Project Name': '', 'Duration (Months)': '', 'Start Month': '', 'Start Year': '', 'End Month': '', 'End Year': ''}]
-            elif export_type == 'weekly_hours':
-                data = [{'Emp Name': '', 'Project Name': '', 'Function': '', 'Week Days': '', 'Hours': ''}]
-            
-        # Create Excel file
-        output = io.BytesIO()
+        app.logger.info(f"Exporting {len(data)} records")
+        
+        # Create Excel file in memory
+        from io import BytesIO
+        import pandas as pd
+        
+        output = BytesIO()
         df = pd.DataFrame(data)
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df.to_excel(writer, sheet_name=export_type.title(), index=False)
+        
+        # Use openpyxl engine which is more reliable
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name=export_type.replace('_', ' ').title(), index=False)
         
         output.seek(0)
         
-        return send_file(
-            output,
-            as_attachment=True,
-            download_name=filename,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        
+        return response
         
     except Exception as e:
         app.logger.error(f"Export failed: {e}")
-        return jsonify({"message": f"Export failed: {str(e)}"}), 500
+        import traceback
+        app.logger.error(traceback.format_exc())
+        return jsonify({"error": f"Export failed: {str(e)}"}), 500
 
 @app.route('/api/export_workload_excel', methods=['GET'])
 def api_export_workload_excel():

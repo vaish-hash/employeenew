@@ -40,7 +40,7 @@ function showMessage(msg, type = 'info', containerElement = null) {
     }, 5000);
 }
 
-// New export function for main data export
+// New export function for main data export - simplified and robust
 function exportData(dataType) {
     const exportMessageContainer = document.getElementById('export-message-container');
     
@@ -51,33 +51,29 @@ function exportData(dataType) {
     
     showMessage('Preparing export...', 'info', exportMessageContainer);
     
-    // Use fetch to handle the download properly
-    const url = `/api/export_data?type=${dataType}`;
-    
-    fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw err; });
+    // Simple direct download approach
+    try {
+        const url = `/api/export_data?type=${dataType}&t=${Date.now()}`;
+        
+        // Create hidden iframe for download
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = url;
+        document.body.appendChild(iframe);
+        
+        // Remove iframe after a short delay
+        setTimeout(() => {
+            if (iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
             }
-            return response.blob();
-        })
-        .then(blob => {
-            // Create a download link for the blob
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${dataType}_export.xlsx`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-            
-            showMessage(`${dataType.replace('_', ' ')} export completed successfully!`, 'success', exportMessageContainer);
-        })
-        .catch(error => {
-            console.error('Error exporting data:', error);
-            showMessage(`Export failed: ${error.message || 'Unknown error occurred'}`, 'error', exportMessageContainer);
-        });
+        }, 5000);
+        
+        showMessage(`${dataType.replace('_', ' ')} export started. Download should begin shortly.`, 'success', exportMessageContainer);
+        
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        showMessage('Export failed. Please try again.', 'error', exportMessageContainer);
+    }
 }
 
 // This function handles the download logic for various report types
