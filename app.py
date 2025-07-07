@@ -312,9 +312,20 @@ def api_import_data():
             errors = []
             
             # Debug: Log the actual column names found
-            current_app.logger.info(f"Excel columns found: {list(df.columns)}")
-            current_app.logger.info(f"Data type selected: {data_type}")
-            current_app.logger.info(f"DataFrame shape: {df.shape}")
+            app.logger.info(f"Excel columns found: {list(df.columns)}")
+            app.logger.info(f"Data type selected: {data_type}")
+            app.logger.info(f"DataFrame shape: {df.shape}")
+            
+            # Check if columns are unnamed (Excel has no headers)
+            if all(col.startswith('Unnamed:') for col in df.columns):
+                app.logger.warning("Excel file appears to have no column headers")
+                # Try to use first row as headers if it contains text
+                if not df.empty:
+                    first_row = df.iloc[0]
+                    if any(isinstance(val, str) for val in first_row):
+                        df.columns = first_row
+                        df = df.drop(df.index[0]).reset_index(drop=True)
+                        app.logger.info(f"Used first row as headers: {list(df.columns)}")
 
             if data_type == 'employees':
                 # Expected columns: 'Name', 'Email', 'Position'
@@ -414,6 +425,51 @@ def api_import_data():
                 # This section is designed to handle your raw, unorganized Excel data with
                 # 'Emp Name', 'Project Name', 'Function', 'Week Days', and 'Hours' columns.
                 
+                # Flexible column mapping - check for variations in column names
+                column_mapping = {}
+                df_columns = [str(col).strip() for col in df.columns]
+                
+                # Map employee name column
+                for col in df_columns:
+                    if col.lower() in ['emp name', 'employee name', 'name', 'employee']:
+                        column_mapping['emp_name'] = col
+                        break
+                
+                # Map project name column  
+                for col in df_columns:
+                    if col.lower() in ['project name', 'project', 'proj name']:
+                        column_mapping['project_name'] = col
+                        break
+                        
+                # Map function column
+                for col in df_columns:
+                    if col.lower() in ['function', 'role', 'job function']:
+                        column_mapping['function_name'] = col
+                        break
+                        
+                # Map week days column
+                for col in df_columns:
+                    if col.lower() in ['week days', 'week', 'date', 'week start', 'start date']:
+                        column_mapping['week_days'] = col
+                        break
+                        
+                # Map hours column
+                for col in df_columns:
+                    if col.lower() in ['hours', 'hrs', 'hours worked', 'total hours']:
+                        column_mapping['hours'] = col
+                        break
+                
+                app.logger.info(f"Column mapping: {column_mapping}")
+                
+                # Check if all required columns are mapped
+                required_fields = ['emp_name', 'project_name', 'function_name', 'week_days', 'hours']
+                missing_fields = [field for field in required_fields if field not in column_mapping]
+                
+                if missing_fields:
+                    error_msg = f"Missing required columns. Could not find mapping for: {missing_fields}. Available columns: {df_columns}"
+                    app.logger.error(error_msg)
+                    return jsonify({"message": error_msg}), 400
+                
                 employee_cache = {} # name -> Employee object
                 project_cache = {}  # name -> Project object
                 assignment_cache = {} # (employee_id, project_id) -> Assignment object
@@ -426,11 +482,11 @@ def api_import_data():
                 aggregated_weekly_hours = {} # (emp_name, proj_name, func_name, week_start_date_obj) -> total_hours
 
                 for index, row in df.iterrows():
-                    emp_name = str(row.get('Emp Name')).strip()
-                    project_name = str(row.get('Project Name')).strip()
-                    function_name = str(row.get('Function')).strip()
-                    week_days_raw = row.get('Week Days')
-                    hours_raw = row.get('Hours')
+                    emp_name = str(row.get(column_mapping['emp_name'])).strip()
+                    project_name = str(row.get(column_mapping['project_name'])).strip()
+                    function_name = str(row.get(column_mapping['function_name'])).strip()
+                    week_days_raw = row.get(column_mapping['week_days'])
+                    hours_raw = row.get(column_mapping['hours'])
 
                     # Basic validation for essential data presence in *this* row
                     if not all([emp_name, project_name, function_name, week_days_raw is not None, hours_raw is not None]):
@@ -906,6 +962,71 @@ def api_record_actual_hours():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error recording actual hours: {str(e)}"}), 500
+
+@app.route('/api/export_data', methods=['GET'])
+def api_export_data():
+    """Export data to Excel format"""
+    if not (session.get('logged_in') and session['logged_in']):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        export_type = request.args.get('type', 'weekly_hours')
+        
+        if export_type == 'employees':
+            # Export employees data
+            employees = Employee.query.all()
+            data = [{'Name': emp.name, 'Email': emp.email, 'Role': emp.role} for emp in employees]
+            filename = 'employees_export.xlsx'
+            
+        elif export_type == 'projects':
+            # Export projects data
+            projects = Project.query.all()
+            data = [{
+                'Project Name': proj.name,
+                'Duration (Months)': proj.duration_months,
+                'Start Month': proj.start_month,
+                'Start Year': proj.start_year,
+                'End Month': proj.end_month,
+                'End Year': proj.end_year
+            } for proj in projects]
+            filename = 'projects_export.xlsx'
+            
+        elif export_type == 'weekly_hours':
+            # Export weekly hours data
+            weekly_hours = db.session.query(WeeklyHours).join(Assignment).join(Employee).join(Project).all()
+            data = [{
+                'Emp Name': wh.assignment.employee.name,
+                'Project Name': wh.assignment.project.name,
+                'Function': wh.function_name,
+                'Week Days': wh.week_start_date.strftime('%Y-%m-%d'),
+                'Hours': wh.hours_worked
+            } for wh in weekly_hours]
+            filename = 'weekly_hours_export.xlsx'
+            
+        else:
+            return jsonify({"message": "Invalid export type"}), 400
+            
+        if not data:
+            return jsonify({"message": f"No {export_type} data available to export"}), 404
+            
+        # Create Excel file
+        output = io.BytesIO()
+        df = pd.DataFrame(data)
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, sheet_name=export_type.title(), index=False)
+        
+        output.seek(0)
+        
+        return send_file(
+            output,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Export failed: {e}")
+        return jsonify({"message": f"Export failed: {str(e)}"}), 500
 
 @app.route('/api/export_workload_excel', methods=['GET'])
 def api_export_workload_excel():

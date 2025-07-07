@@ -6,10 +6,55 @@
     <p>Click the button below to download Excel files containing various reports:</p>
     
     <div class="export-options">
-        <button onclick="downloadExcel('workload')">Download Workload Summary (Excel)</button>
-        <button onclick="downloadExcel('actual_hours_detailed')">Download Detailed Actual Hours (Excel)</button>
-        <button onclick="downloadExcel('processed_imported_data')">Download Processed Import Data (Excel)</button>
+        <div class="export-section">
+            <h3>Main Data Export</h3>
+            <button class="export-btn" onclick="exportData('employees')">Export Employees</button>
+            <button class="export-btn" onclick="exportData('projects')">Export Projects</button>
+            <button class="export-btn" onclick="exportData('weekly_hours')">Export Weekly Hours</button>
+        </div>
+        
+        <div class="export-section">
+            <h3>Reports & Analytics</h3>
+            <button class="export-btn" onclick="downloadExcel('workload')">Download Workload Summary</button>
+            <button class="export-btn" onclick="downloadExcel('actual_hours_detailed')">Download Detailed Actual Hours</button>
+            <button class="export-btn" onclick="downloadExcel('processed_imported_data')">Download Processed Import Data</button>
+        </div>
     </div>
+
+    <style>
+        .export-options {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .export-section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .export-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .export-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .export-btn:hover {
+            background-color: #0056b3;
+        }
+        .export-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
 
     <div id="export-message-container" class="message-container" style="margin-top: 20px; display: none;"></div>
 

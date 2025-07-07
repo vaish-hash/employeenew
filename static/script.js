@@ -40,6 +40,31 @@ function showMessage(msg, type = 'info', containerElement = null) {
     }, 5000);
 }
 
+// New export function for main data export
+function exportData(dataType) {
+    const exportMessageContainer = document.getElementById('export-message-container');
+    
+    if (!exportMessageContainer) {
+        console.error('Export message container not found');
+        return;
+    }
+    
+    showMessage('Preparing export...', 'info', exportMessageContainer);
+    
+    // Create download link
+    const url = `/api/export_data?type=${dataType}`;
+    
+    // Create temporary link element and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${dataType}_export.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showMessage(`${dataType.replace('_', ' ')} export started. Download should begin shortly.`, 'success', exportMessageContainer);
+}
+
 // This function handles the download logic for various report types
 function downloadExcel(reportType) {
     let url = '';
