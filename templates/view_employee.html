@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}{{ employee.full_name }} - Employee Management System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Employee Details
+                    </h4>
+                    <div>
+                        <a href="{{ url_for('edit_employee', id=employee.id) }}" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-edit me-1"></i>
+                            Edit
+                        </a>
+                        <a href="{{ url_for('delete_employee', id=employee.id) }}" 
+                           class="btn btn-outline-danger btn-sm ms-2"
+                           onclick="return confirm('Are you sure you want to delete {{ employee.full_name }}?')">
+                            <i class="fas fa-trash me-1"></i>
+                            Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Employee Avatar and Basic Info -->
+                    <div class="col-md-12 mb-4">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary rounded-circle me-4 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                <i class="fas fa-user fa-2x text-white"></i>
+                            </div>
+                            <div>
+                                <h2 class="mb-1">{{ employee.full_name }}</h2>
+                                <p class="text-muted mb-1">{{ employee.position }}</p>
+                                <span class="badge bg-secondary">{{ employee.department }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Personal Information -->
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-user me-2"></i>
+                                    Personal Information
+                                </h5>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Email:</label>
+                                    <div>
+                                        <a href="mailto:{{ employee.email }}" class="text-decoration-none">
+                                            <i class="fas fa-envelope me-1"></i>
+                                            {{ employee.email }}
+                                        </a>
+                                    </div>
+                                </div>
+                                
+                                {% if employee.phone %}
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Phone:</label>
+                                    <div>
+                                        <a href="tel:{{ employee.phone }}" class="text-decoration-none">
+                                            <i class="fas fa-phone me-1"></i>
+                                            {{ employee.phone }}
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if employee.address %}
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Address:</label>
+                                    <div>
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        {{ employee.address }}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Employment Information -->
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-briefcase me-2"></i>
+                                    Employment Information
+                                </h5>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Department:</label>
+                                    <div>
+                                        <i class="fas fa-building me-1"></i>
+                                        {{ employee.department }}
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Position:</label>
+                                    <div>
+                                        <i class="fas fa-user-tie me-1"></i>
+                                        {{ employee.position }}
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Salary:</label>
+                                    <div>
+                                        <i class="fas fa-dollar-sign me-1"></i>
+                                        <strong>${{ "{:,.2f}".format(employee.salary) }}</strong>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Hire Date:</label>
+                                    <div>
+                                        <i class="fas fa-calendar-alt me-1"></i>
+                                        {{ employee.hire_date.strftime('%B %d, %Y') if employee.hire_date else 'Not specified' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notes Section -->
+                {% if employee.notes %}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-sticky-note me-2"></i>
+                                    Notes
+                                </h5>
+                                <p class="card-text">{{ employee.notes }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Metadata -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Record Information
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-plus-circle me-1"></i>
+                                            Created: {{ employee.created_at.strftime('%Y-%m-%d %H:%M:%S') if employee.created_at else 'Unknown' }}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-edit me-1"></i>
+                                            Last Updated: {{ employee.updated_at.strftime('%Y-%m-%d %H:%M:%S') if employee.updated_at else 'Unknown' }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Back to List
+                    </a>
+                    <div>
+                        <a href="{{ url_for('edit_employee', id=employee.id) }}" class="btn btn-warning">
+                            <i class="fas fa-edit me-2"></i>
+                            Edit Employee
+                        </a>
+                        <a href="{{ url_for('delete_employee', id=employee.id) }}" 
+                           class="btn btn-danger ms-2"
+                           onclick="return confirm('Are you sure you want to delete {{ employee.full_name }}? This action cannot be undone.')">
+                            <i class="fas fa-trash me-2"></i>
+                            Delete Employee
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
