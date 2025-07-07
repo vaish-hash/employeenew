@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="projects-section" class="content-section active">
+    <h2>All Projects</h2><!-- NEW SEARCH BAR FOR PROJECTS -->
+    <div class="local-search-bar">
+        <input type="text" id="project-search-input" placeholder="Search by project name...">
+        <button id="project-search-btn">Search Projects</button>
+    </div>
+    <table id="projects-table">
+        <thead>
+            <tr>
+                <th>Project Name</th>
+                <th>Duration (Months)</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Resources</th> {# New column for consolidated resources #}
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Project data will be rendered here by JavaScript -->
+        </tbody>
+    </table>
+</div>
+{% endblock %}
