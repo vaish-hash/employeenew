@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="actual-hours-page" class="content-section">
+    <h2>Record Actual Weekly Hours & View Report</h2>
+
+    <!-- Section for Recording Actual Hours -->
+    <div class="form-section" style="margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #e0e0e0;">
+        <h3>Log New Weekly Hours</h3>
+        <div id="record-actual-hours-message-container" class="message-container" style="display:none;"></div>
+        <form id="record-actual-hours-form">
+            <div class="form-group">
+                <label for="actual-hours-employee-id">Employee Name:</label>
+                <select id="actual-hours-employee-id" name="employee_id" required>
+                    <option value="">-- Select Employee --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="actual-hours-project-id">Project Name:</label>
+                <select id="actual-hours-project-id" name="project_id" required>
+                    <option value="">-- Select Project --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="actual-hours-function-name">Function (Position):</label>
+                <select id="actual-hours-function-name" name="function_name" required>
+                    <option value="">-- Select Function --</option>
+                    {# Options will be dynamically populated by JavaScript from PREDEFINED_POSITIONS #}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="actual-week-start-date">Week Start Date (Monday):</label>
+                <input type="date" id="actual-week-start-date" name="week_start_date" required>
+            </div>
+            <div class="form-group">
+                <label for="actual-hours-worked">Hours Worked This Week:</label>
+                <input type="number" id="actual-hours-worked" name="actual_hours" min="0" required> {# Changed name to actual_hours #}
+            </div>
+            <button type="submit">Record Hours</button>
+        </form>
+    </div>
+
+    <!-- Section for Actual Weekly Report (Excel-like Table) -->
+    <div class="report-section">
+        <h3>Actual Weekly Hours Report</h3>
+        <div class="local-search-bar" style="margin-bottom: 20px;">
+            <input type="text" id="actual-hours-search-input" placeholder="Search by employee, project, or function..."> {# Changed ID to actual-hours-search-input #}
+            <button id="actual-hours-search-btn">Search Report</button> {# Changed ID to actual-hours-search-btn #}
+        </div>
+        
+        <table id="actual-weekly-report-table" class="excel-like-table">
+            <thead>
+                <tr>
+                    <th rowspan="2">S.No.</th>
+                    <th rowspan="2">Employee Name</th>
+                    <th rowspan="2">Project Name</th>
+                    <th rowspan="2">Function</th>
+                    <!-- Dynamic week headers will be added here by JavaScript -->
+                </tr>
+                <tr>
+                    <!-- Sub-headers for status/total if applicable for each week, otherwise just hours -->
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Report data will be dynamically loaded and grouped by JavaScript -->
+                <tr><td colspan="4" style="text-align: center;">Loading report data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock %}
