@@ -1111,90 +1111,177 @@ def api_record_actual_hours():
 
 @app.route('/api/export_data', methods=['GET'])
 def api_export_data():
-    """Export data to Excel format"""
+    """Simple, bulletproof export endpoint"""
     if not (session.get('logged_in') and session['logged_in']):
-        return jsonify({"error": "Unauthorized"}), 401
+        return redirect(url_for('login'))
 
     try:
         export_type = request.args.get('type', 'weekly_hours')
-        app.logger.info(f"Exporting {export_type} data")
         
+        # Create simple data structure
         data = []
         filename = f'{export_type}_export.xlsx'
         
         if export_type == 'employees':
-            # Export employees data
             employees = Employee.query.all()
-            data = [{'Name': emp.name, 'Email': emp.email, 'Role': emp.role} for emp in employees]
+            for emp in employees:
+                data.append({
+                    'Name': emp.name or '',
+                    'Email': emp.email or '', 
+                    'Role': emp.role or ''
+                })
             if not data:
                 data = [{'Name': 'No employees found', 'Email': '', 'Role': ''}]
-            
+                
         elif export_type == 'projects':
-            # Export projects data
             projects = Project.query.all()
-            data = [{
-                'Project Name': proj.name,
-                'Duration (Months)': proj.duration_months,
-                'Start Month': proj.start_month,
-                'Start Year': proj.start_year,
-                'End Month': proj.end_month,
-                'End Year': proj.end_year
-            } for proj in projects]
+            for proj in projects:
+                data.append({
+                    'Project Name': proj.name or '',
+                    'Duration (Months)': proj.duration_months or 0,
+                    'Start Month': proj.start_month or '',
+                    'Start Year': proj.start_year or 0,
+                    'End Month': proj.end_month or '',
+                    'End Year': proj.end_year or 0
+                })
             if not data:
                 data = [{'Project Name': 'No projects found', 'Duration (Months)': '', 'Start Month': '', 'Start Year': '', 'End Month': '', 'End Year': ''}]
-            
+                
         elif export_type == 'weekly_hours':
-            # Export weekly hours data - simplified query
             weekly_hours = WeeklyHours.query.all()
             for wh in weekly_hours:
-                try:
-                    assignment = Assignment.query.get(wh.assignment_id)
-                    if assignment:
-                        employee = Employee.query.get(assignment.employee_id)
-                        project = Project.query.get(assignment.project_id)
-                        if employee and project:
-                            data.append({
-                                'Emp Name': employee.name,
-                                'Project Name': project.name,
-                                'Function': wh.function_name or 'General',
-                                'Week Days': wh.week_start_date.strftime('%Y-%m-%d') if wh.week_start_date else 'N/A',
-                                'Hours': wh.hours_worked
-                            })
-                except Exception as e:
-                    app.logger.warning(f"Error processing weekly hours record {wh.id}: {e}")
-                    
+                assignment = Assignment.query.get(wh.assignment_id)
+                if assignment:
+                    employee = Employee.query.get(assignment.employee_id) 
+                    project = Project.query.get(assignment.project_id)
+                    if employee and project:
+                        data.append({
+                            'Emp Name': employee.name or '',
+                            'Project Name': project.name or '',
+                            'Function': wh.function_name or 'General',
+                            'Week Days': str(wh.week_start_date) if wh.week_start_date else '',
+                            'Hours': wh.hours_worked or 0
+                        })
             if not data:
                 data = [{'Emp Name': 'No weekly hours found', 'Project Name': '', 'Function': '', 'Week Days': '', 'Hours': ''}]
-            
-        else:
-            return jsonify({"error": "Invalid export type"}), 400
-            
-        app.logger.info(f"Exporting {len(data)} records")
         
-        # Create Excel file in memory
-        from io import BytesIO
-        import pandas as pd
-        
-        output = BytesIO()
+        # Simple Excel creation
         df = pd.DataFrame(data)
-        
-        # Use openpyxl engine which is more reliable
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name=export_type.replace('_', ' ').title(), index=False)
-        
+        output = io.BytesIO()
+        df.to_excel(output, index=False, engine='openpyxl')
         output.seek(0)
         
         response = make_response(output.getvalue())
         response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        response.headers['Cache-Control'] = 'no-cache'
         
         return response
         
     except Exception as e:
-        app.logger.error(f"Export failed: {e}")
-        import traceback
-        app.logger.error(traceback.format_exc())
-        return jsonify({"error": f"Export failed: {str(e)}"}), 500
+        # Return plain text error instead of JSON to avoid parsing issues
+        error_response = make_response(f"Export Error: {str(e)}")
+        error_response.headers['Content-Type'] = 'text/plain'
+        return error_response
+
+# Delete endpoints
+@app.route('/api/employees/<int:employee_id>', methods=['DELETE'])
+def delete_employee(employee_id):
+    """Delete a specific employee"""
+    if not (session.get('logged_in') and session['logged_in']):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        employee = Employee.query.get(employee_id)
+        if not employee:
+            return jsonify({"message": "Employee not found"}), 404
+        
+        # Check for existing assignments
+        assignments = Assignment.query.filter_by(employee_id=employee_id).all()
+        if assignments:
+            return jsonify({"message": f"Cannot delete employee. They have {len(assignments)} active assignment(s). Delete assignments first."}), 400
+        
+        db.session.delete(employee)
+        db.session.commit()
+        return jsonify({"message": f"Employee '{employee.name}' deleted successfully"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error deleting employee: {str(e)}"}), 500
+
+@app.route('/api/projects/<int:project_id>', methods=['DELETE'])
+def delete_project(project_id):
+    """Delete a specific project"""
+    if not (session.get('logged_in') and session['logged_in']):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        project = Project.query.get(project_id)
+        if not project:
+            return jsonify({"message": "Project not found"}), 404
+        
+        # Check for existing assignments
+        assignments = Assignment.query.filter_by(project_id=project_id).all()
+        if assignments:
+            return jsonify({"message": f"Cannot delete project. It has {len(assignments)} active assignment(s). Delete assignments first."}), 400
+        
+        db.session.delete(project)
+        db.session.commit()
+        return jsonify({"message": f"Project '{project.name}' deleted successfully"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error deleting project: {str(e)}"}), 500
+
+@app.route('/api/assignments/<int:assignment_id>', methods=['DELETE'])
+def delete_assignment(assignment_id):
+    """Delete a specific assignment"""
+    if not (session.get('logged_in') and session['logged_in']):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        assignment = Assignment.query.get(assignment_id)
+        if not assignment:
+            return jsonify({"message": "Assignment not found"}), 404
+        
+        # Check for existing weekly hours
+        weekly_hours = WeeklyHours.query.filter_by(assignment_id=assignment_id).all()
+        if weekly_hours:
+            return jsonify({"message": f"Cannot delete assignment. It has {len(weekly_hours)} weekly hour record(s). Delete weekly hours first."}), 400
+        
+        employee_name = assignment.employee.name
+        project_name = assignment.project.name
+        
+        db.session.delete(assignment)
+        db.session.commit()
+        return jsonify({"message": f"Assignment for '{employee_name}' on '{project_name}' deleted successfully"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error deleting assignment: {str(e)}"}), 500
+
+@app.route('/api/weekly_hours/<int:weekly_hours_id>', methods=['DELETE'])
+def delete_weekly_hours(weekly_hours_id):
+    """Delete a specific weekly hours record"""
+    if not (session.get('logged_in') and session['logged_in']):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        weekly_hours = WeeklyHours.query.get(weekly_hours_id)
+        if not weekly_hours:
+            return jsonify({"message": "Weekly hours record not found"}), 404
+        
+        assignment = weekly_hours.assignment
+        employee_name = assignment.employee.name if assignment and assignment.employee else "Unknown"
+        project_name = assignment.project.name if assignment and assignment.project else "Unknown"
+        
+        db.session.delete(weekly_hours)
+        db.session.commit()
+        return jsonify({"message": f"Weekly hours record for '{employee_name}' on '{project_name}' deleted successfully"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error deleting weekly hours: {str(e)}"}), 500
 
 @app.route('/api/export_workload_excel', methods=['GET'])
 def api_export_workload_excel():

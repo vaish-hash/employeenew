@@ -40,7 +40,7 @@ function showMessage(msg, type = 'info', containerElement = null) {
     }, 5000);
 }
 
-// New export function for main data export - simplified and robust
+// Bulletproof export function
 function exportData(dataType) {
     const exportMessageContainer = document.getElementById('export-message-container');
     
@@ -49,31 +49,121 @@ function exportData(dataType) {
         return;
     }
     
-    showMessage('Preparing export...', 'info', exportMessageContainer);
+    showMessage('Starting export...', 'info', exportMessageContainer);
     
-    // Simple direct download approach
-    try {
-        const url = `/api/export_data?type=${dataType}&t=${Date.now()}`;
-        
-        // Create hidden iframe for download
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = url;
-        document.body.appendChild(iframe);
-        
-        // Remove iframe after a short delay
-        setTimeout(() => {
-            if (iframe.parentNode) {
-                iframe.parentNode.removeChild(iframe);
-            }
-        }, 5000);
-        
-        showMessage(`${dataType.replace('_', ' ')} export started. Download should begin shortly.`, 'success', exportMessageContainer);
-        
-    } catch (error) {
-        console.error('Error exporting data:', error);
-        showMessage('Export failed. Please try again.', 'error', exportMessageContainer);
+    // Direct window location method - most reliable
+    const url = `/api/export_data?type=${dataType}&timestamp=${Date.now()}`;
+    window.location.href = url;
+    
+    // Show success message after a delay
+    setTimeout(() => {
+        showMessage(`${dataType.replace('_', ' ')} export completed!`, 'success', exportMessageContainer);
+    }, 2000);
+}
+
+// Delete functions
+function deleteEmployee(employeeId, employeeName) {
+    if (!confirm(`Are you sure you want to delete employee "${employeeName}"? This action cannot be undone.`)) {
+        return;
     }
+    
+    fetch(`/api/employees/${employeeId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            showMessage(data.message, data.message.includes('Error') ? 'error' : 'success', globalMessageContainer);
+            if (data.message.includes('deleted successfully')) {
+                // Refresh the employees list
+                location.reload();
+            }
+        }
+    })
+    .catch(error => {
+        showMessage(`Error deleting employee: ${error.message}`, 'error', globalMessageContainer);
+    });
+}
+
+function deleteProject(projectId, projectName) {
+    if (!confirm(`Are you sure you want to delete project "${projectName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            showMessage(data.message, data.message.includes('Error') ? 'error' : 'success', globalMessageContainer);
+            if (data.message.includes('deleted successfully')) {
+                // Refresh the projects list
+                location.reload();
+            }
+        }
+    })
+    .catch(error => {
+        showMessage(`Error deleting project: ${error.message}`, 'error', globalMessageContainer);
+    });
+}
+
+function deleteAssignment(assignmentId, employeeName, projectName) {
+    if (!confirm(`Are you sure you want to delete assignment of "${employeeName}" to "${projectName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    fetch(`/api/assignments/${assignmentId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            showMessage(data.message, data.message.includes('Error') ? 'error' : 'success', globalMessageContainer);
+            if (data.message.includes('deleted successfully')) {
+                // Refresh the assignments list
+                location.reload();
+            }
+        }
+    })
+    .catch(error => {
+        showMessage(`Error deleting assignment: ${error.message}`, 'error', globalMessageContainer);
+    });
+}
+
+function deleteWeeklyHours(weeklyHoursId, employeeName, projectName, weekDate) {
+    if (!confirm(`Are you sure you want to delete weekly hours record for "${employeeName}" on "${projectName}" for week ${weekDate}? This action cannot be undone.`)) {
+        return;
+    }
+    
+    fetch(`/api/weekly_hours/${weeklyHoursId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            showMessage(data.message, data.message.includes('Error') ? 'error' : 'success', globalMessageContainer);
+            if (data.message.includes('deleted successfully')) {
+                // Refresh the page or update the display
+                location.reload();
+            }
+        }
+    })
+    .catch(error => {
+        showMessage(`Error deleting weekly hours: ${error.message}`, 'error', globalMessageContainer);
+    });
 }
 
 // This function handles the download logic for various report types
@@ -202,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (employees && employeesTableBody) {
             employeesTableBody.innerHTML = '';
             if (employees.length === 0) {
-                employeesTableBody.innerHTML = '<tr><td colspan="3">No employees found.</td></tr>';
+                employeesTableBody.innerHTML = '<tr><td colspan="4">No employees found.</td></tr>';
                 return;
             }
             employees.forEach(employee => {
@@ -210,6 +300,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.insertCell().textContent = employee.name;
                 row.insertCell().textContent = employee.role;
                 row.insertCell().textContent = employee.email;
+                
+                // Add actions cell with delete button
+                const actionsCell = row.insertCell();
+                actionsCell.innerHTML = `
+                    <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${employee.id}, '${employee.name.replace(/'/g, "\\'")}')">
+                        Delete
+                    </button>
+                `;
             });
         }
     };
@@ -234,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (projects && projectsTableBody) {
             projectsTableBody.innerHTML = '';
             if (projects.length === 0) {
-                projectsTableBody.innerHTML = '<tr><td colspan="4">No projects found.</td></tr>';
+                projectsTableBody.innerHTML = '<tr><td colspan="5">No projects found.</td></tr>';
                 return;
             }
             projects.forEach(project => {
@@ -253,6 +351,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.insertCell().textContent = project.duration_months;
                 row.insertCell().textContent = startDateStr;
                 row.insertCell().textContent = endDateStr;
+                
+                // Add actions cell with delete button
+                const actionsCell = row.insertCell();
+                actionsCell.innerHTML = `
+                    <button class="btn btn-danger btn-sm" onclick="deleteProject(${project.id}, '${project.name.replace(/'/g, "\\'")}')">
+                        Delete
+                    </button>
+                `;
             });
         }
     };
