@@ -40,7 +40,7 @@ function showMessage(msg, type = 'info', containerElement = null) {
     }, 5000);
 }
 
-// Bulletproof export function
+// Bulletproof export function using direct download
 function exportData(dataType) {
     const exportMessageContainer = document.getElementById('export-message-container');
     
@@ -49,10 +49,9 @@ function exportData(dataType) {
         return;
     }
     
-    showMessage('Starting export...', 'info', exportMessageContainer);
-    
-    // Direct window location method - most reliable
-    const url = `/api/export_data?type=${dataType}&timestamp=${Date.now()}`;
+    // Use window.location.href for direct download - no JSON parsing issues
+    showMessage(`Downloading ${dataType} export...`, 'info', exportMessageContainer);
+    const url = `/api/export_data?type=${dataType}`;
     window.location.href = url;
     
     // Show success message after a delay
