@@ -73,7 +73,7 @@ instance_path = os.path.join(current_app_dir, 'instance')
 if not os.path.exists(instance_path):
     os.makedirs(instance_path)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/ashwi2025/mysite/app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)

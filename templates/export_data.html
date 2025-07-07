@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="export-data-page" class="content-section">
+    <h2>Export Data</h2>
+    <p>Click the button below to download Excel files containing various reports:</p>
+    
+    <div class="export-options">
+        <button onclick="downloadExcel('workload')">Download Workload Summary (Excel)</button>
+        <button onclick="downloadExcel('actual_hours_detailed')">Download Detailed Actual Hours (Excel)</button>
+        <button onclick="downloadExcel('processed_imported_data')">Download Processed Import Data (Excel)</button>
+    </div>
+
+    <div id="export-message-container" class="message-container" style="margin-top: 20px; display: none;"></div>
+
+</div>
+
+<!-- The JavaScript functions will now be in static/script.js -->
+{% endblock %}
